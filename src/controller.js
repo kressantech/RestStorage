@@ -1,7 +1,7 @@
 //const uploadFile = require("../middleware/upload");
 const fs = require("fs-extra");
-const baseUrl = "http://localhost:8080/files/";
-const my = require ("../others/my.js")
+//const baseUrl = "http://localhost:8080/files/";
+const my = require ("./my.js")
 const v = require ('voca')
 const util = require("util");
 const multer = require("multer");
@@ -128,8 +128,11 @@ const listFiles = (req, res) => {
 	var msg;
 	var isOnlyFiles = (req.params.restype == 'files')
 	srcDir = my.getSrcDir(srcDir);
+	
 	if (!isOnlyFiles && req.params.restype != 'folders') {
 		my.resErr(res,`Invalid list suffix`);return;}
+
+  if ( logV() > 5 ) {console.info(`Listing ${req.params.restype} in ${srcDir}`)}
 		
 	fs.readdir(srcDir, {withFileTypes:true}, function (err, files) {
 		if (err) {my.resErr(res,err.toString());return;}
@@ -172,6 +175,7 @@ const download = (req, res) => {
 	   
 };
 
+
 const deleteFile = (req, res) => {
   var srcDir=req.params.srcdir;
 	var msg,path,opts={};
@@ -209,9 +213,9 @@ const deleteFile = (req, res) => {
 	   });
 	
 	  }
-      
-
 };
+
+
 const setConfig = (req, res) => {
 	var paramName=req.params.paramname;
 	var paramValue=req.params.paramvalue;
