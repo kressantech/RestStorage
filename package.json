@@ -1,0 +1,12 @@
+{
+  "name": "rest-storage",
+  "version": "1.0.0",
+  "description": "Nodejs based storage server - Rest API",
+  "main": "rest-store.js",
+  "author": "Kavi <kavi@kressantech.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kressantech/RestStorage.git"
+  }
+}
