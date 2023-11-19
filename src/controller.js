@@ -6,11 +6,15 @@ const v = require ('voca')
 const util = require("util");
 const multer = require("multer");
 
+//********* upload *************
 const upload = async (req, res) => {
 	var srcDir=req.params.srcdir;
 	var fileName = req.params.filename;
 	  srcDir = my.getSrcDir(srcDir);
-	  console.log(srcDir)
+	  //console.log(srcDir)
+
+	  if (config.disableUpload) {return my.resErr(res,"Upload not allowed")}
+
 	  try
 	  {
 		stats = fs.statSync(srcDir)
@@ -59,10 +63,13 @@ const upload = async (req, res) => {
   }
 };
 
+//********* createFolder *************
 const createFolder = async (req, res) => {
 	var srcDir=req.params.srcdir;
 	  srcDir = my.getSrcDir(srcDir);
 	  
+	  if (config.disableUpload) {return my.resErr(res,"Create folder not allowed")}
+
 	  try
 	  {
 		  //console.log(srcDir);
@@ -85,6 +92,7 @@ const createFolder = async (req, res) => {
     return my.resMsg(res, "Folder created - " + srcDir)
 };
 
+//********* move *************
 const move = async (req, res) => {
 	var srcDir=req.params.srcdir;
 	var trgDir=req.params.trgdir;
@@ -99,6 +107,8 @@ const move = async (req, res) => {
 	  trgDir = my.getDir(trgDir);
 	  path = srcDir;
 	  
+	  if (config.disableMove) {return my.resErr(res,"Moving resources not allowed")}
+
 	  if ( logV() > 5 ) {console.info(`Moving ${filename} from ${srcDir} to ${trgDir}`)}
 	  
 	  //Check Source Folder
@@ -122,42 +132,122 @@ const move = async (req, res) => {
     return my.resMsg(res, `Resource (${filename}) moved from (${srcDir}) to (${trgDir}) successfully`)
 };
 
+//********* move All *************
+const moveAll = async (req, res) => {
+	var srcDir=req.params.srcdir;
+	var trgDir=req.params.trgdir;
+	var path;
 
+	/* var isFile = (req.params.restype == 'file')
+	
+	if ( ! isFile && req.params.restype != 'folder') {
+		return my.resErr(res,`Invalid move resource type suffix`);} */
+		
+	  srcDir = my.getDir(srcDir);
+	  trgDir = my.getDir(trgDir);
+	  path = srcDir;
+	  
+	  if (config.disableMove) {return my.resErr(res,"Moving resources not allowed")}
+
+  
+	  //Check Source Folder
+	  try{
+		stats = fs.statSync(srcDir)
+		if ( ! stats.isDirectory() ) {return my.resErr(res,`Source Folder exists but not a directory (${srcDir})`)}
+		  } catch (ex) {return my.resErr(res,`Source Folder invalid or does not exists (${srcDir}) - ${ex}`)}
+	  
+	  //Check Target Folder
+	  try{
+		stats = fs.statSync(trgDir)
+		if ( ! stats.isDirectory() ) {return my.resErr(res,`Target Folder exists but not a directory (${trgDir})`)}
+		  } catch (ex) {return my.resErr(res,`Target Folder invalid or does not exists (${trgDir}) - ${ex}`)}
+	  
+	  
+	  fs.readdir(srcDir, {withFileTypes:true}, function (err, files) {
+				if (err) {return my.resErr(res,err.toString());}
+				filesCount=files.length;
+				if ( logV() > 5 ) {console.info(`Moving ${filesCount} resources from ${srcDir} to ${trgDir}`)}
+				files.forEach((file) =>
+				{
+					try{
+						if ( logV() > 7 ) {console.info(`Moving (${file.name})`)}
+		  			fs.moveSync(srcDir + file.name,trgDir + file.name, {overwrite:true})
+	  				}catch (ex) {return my.resErr(res,`Moving ${file.name} from (${srcDir}) to (${trgDir}) failed - ${ex}`)}
+				});
+			  return my.resMsg(res, `${filesCount} resources moved from (${srcDir}) to (${trgDir}) successfully`)
+	  });
+};
+
+//********* rename File *************
+const rename = async (req, res) => {
+	var srcDir=req.params.srcdir;
+	var oldName=req.params.oldname;
+	var newName=req.params.newname;
+	
+	  srcDir = my.getDir(srcDir);
+	  
+	  if (config.disableUpload) {return my.resErr(res,"Renaming resource not allowed")}
+
+	  if ( logV() > 5 ) {console.info(`Renaming ${oldName} to ${newName} in ${srcDir}`)}
+	  
+	  //Check Source Folder
+	  try{
+		stats = fs.statSync(srcDir)
+		if ( ! stats.isDirectory() ) {return my.resErr(res,`Source Folder exists but not a directory (${srcDir})`)}
+		  } catch (ex) {return my.resErr(res,`Source Folder invalid or does not exists (${srcDir}) - ${ex}`)}
+	  
+		if (v.count(oldName) < 1 ) {return my.resErr(res,"OldName not specified")}
+		if (v.count(newName) < 1 ) {return my.resErr(res,"newName not specified")}
+	  
+	  try{
+		  fs.renameSync(srcDir + oldName,srcDir + newName)
+	  }catch (ex) {return my.resErr(res,`Rename ${oldName} to ${newName} failed - ${ex}`)}
+	  
+    return my.resMsg(res, `Renamed ${oldName} to ${newName} in ${srcDir}`)
+};
+
+
+//********* list Files *************
 const listFiles = (req, res) => {
+	var fileInfos = [];
 	var srcDir=req.params.srcdir;
 	var msg;
 	var isOnlyFiles = (req.params.restype == 'files')
+
 	srcDir = my.getSrcDir(srcDir);
 	
 	if (!isOnlyFiles && req.params.restype != 'folders') {
-		my.resErr(res,`Invalid list suffix`);return;}
+		return my.resErr(res,`Invalid list suffix`);}
 
-  if ( logV() > 5 ) {console.info(`Listing ${req.params.restype} in ${srcDir}`)}
-		
+	if (config.disableList) {return my.resErr(res,"Listing resources not allowed")}
+
+ 
 	fs.readdir(srcDir, {withFileTypes:true}, function (err, files) {
-		if (err) {my.resErr(res,err.toString());return;}
+		if (err) {return my.resErr(res,err.toString());}
 	//console.log(files)
-	let fileInfos = [];
+	
 	files.forEach((file) => {
 		if (isOnlyFiles)
 		{if (! file.isFile()) {return;}}
 		else
 		{if (! file.isDirectory()) {return;}}
       fileInfos.push({name: file.name});
-		
 		});
-		
+	if ( logV() > 5 ) {console.info(`Listing (${fileInfos.length}) ${req.params.restype} in ${srcDir}`)}		
 	res.status(200).send(fileInfos);
 	
 	});
 
 };
 
+//********* download *************
 const download = (req, res) => {
 	
 	var srcDir=req.params.srcdir;
     const filename = req.params.filename;
     srcDir = my.getSrcDir(srcDir);
+
+  if (config.disableDownload) {return my.resErr(res,"Download not allowed")}
 
 	if (v.count(filename) < 1 ) {my.resErr(res,"FileName not specified");return;}
 	path= srcDir + filename;
@@ -175,7 +265,7 @@ const download = (req, res) => {
 	   
 };
 
-
+//********* upload *************
 const deleteFile = (req, res) => {
   var srcDir=req.params.srcdir;
 	var msg,path,opts={};
@@ -186,7 +276,8 @@ const deleteFile = (req, res) => {
 		return my.resErr(res,`Invalid delete suffix`);}
   const filename = req.params.filename;
   
-  
+  if (config.disableDelete) {return my.resErr(res,"Delete resource not allowed")}
+
   if ( isFile){
 	  if (v.count(filename) < 1 ) {my.resErr(res,"FileName not specified");return;}
 	  path= srcDir + filename;
@@ -249,5 +340,7 @@ module.exports = {
   deleteFile,
   createFolder,
   move,
+  moveAll,
+  rename,
   setConfig
 };

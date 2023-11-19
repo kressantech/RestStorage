@@ -3,12 +3,17 @@ const express = require("express");
 const https = require("https")
 const app = express();
 const fs = require("fs")
+const fsp = require("fs").promises
 const my = require ("./src/my.js")
 const v = require ("voca")
 const auth_midware = require("./src/auth.js")
-global.HTTP_ERR_CODE=422;
-global.config = require("./config.js")
 
+global.HTTP_ERR_CODE=422;
+
+args = require("minimist")(process.argv.slice(2))
+//console.log(my.getConfig(args))
+global.config = require(my.getConfig(args))
+//process.exit(0)
 //console.log(config.port)
 
 var corsOptions = {

@@ -1,6 +1,7 @@
 const v = require ('voca')
 const fs = require('fs')
-
+const myFile = require("njs-appdef/core/myFile.js")
+const path = require("path")
 
 function getDir(dir)
 {
@@ -92,4 +93,21 @@ function validateConfig()
     return ip === "127.0.0.1" || ip === "::ffff:127.0.0.1" || ip === "::1" || host.indexOf("localhost") !== -1;
 }
 
-module.exports = {getSrcDir, getDir, resMsg,resErr, validateConfig, bytesForHuman,isLocalhost}
+function getConfig(args)
+{
+	configFile = args[Object.keys(args).find((k) => {return k == 'config-file' || k == 'c' || k == 'config'})]
+	configFile = v.trim(configFile)
+	if ( v.count(configFile)< 1 ){
+		configFile= path.resolve(__dirname + '/../config.js')
+		if ( ! myFile.exists(configFile)){
+			configFile=path.resolve(__dirname + '/../config-sample.js')
+		}
+	}
+	else
+	{
+		if ( v.indexOf(configFile,'/') < 0 ) {configFile='./' + configFile}
+	}
+	return configFile;
+	
+}
+module.exports = {getSrcDir, getDir, resMsg,resErr, validateConfig, bytesForHuman,isLocalhost,getConfig}
